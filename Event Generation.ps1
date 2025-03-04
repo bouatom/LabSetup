@@ -1,15 +1,18 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
+# Display menu options
 $menu = @"
 Select a test to run:
-1. Generate Antimalware Alert
-2. Generate Web Reputation Alert
-3. Generate Application Control Alert
-4. Generate Behavior Monitoring Alert
+1. Generate Antimalware Alert - Creates an EICAR test file to trigger antimalware detection
+2. Generate Web Reputation Alert - Accesses a phishing test page to trigger web security controls
+3. Generate Application Control Alert - Downloads and executes WinRAR portable to test application control
+4. Generate Behavior Monitoring Alert - Downloads and executes test malware samples to trigger behavior monitoring
 5. Exit and Clean Up Changes
 "@
 
+# Function to generate an antimalware alert using the EICAR test file
 function Generate-AntimalwareAlert {
+    Write-Host "[INFO] Creating EICAR test file to trigger antimalware detection..."
     $eicarBytes = [byte[]] (
         0x58, 0x35, 0x4F, 0x21, 0x50, 0x25, 0x40, 0x41, 0x50, 0x5B, 0x34, 0x5C, 0x50, 0x5A, 0x58, 0x35,
         0x34, 0x28, 0x50, 0x5E, 0x29, 0x37, 0x43, 0x43, 0x29, 0x37, 0x7D, 0x24, 0x45, 0x49, 0x43, 0x41,
@@ -18,14 +21,15 @@ function Generate-AntimalwareAlert {
         0x48, 0x2B, 0x48, 0x2A
     )
     [System.IO.File]::WriteAllBytes("eicar_test.com", $eicarBytes)
-    Write-Host "EICAR test file created: eicar_test.com"
+    Write-Host "[ALERT] EICAR test file created. Waiting for antimalware detection..."
     Start-Sleep -Seconds 5
     Remove-Item -Path "eicar_test.com" -Force -ErrorAction SilentlyContinue
 }
 
+# Function to test web reputation security by accessing a phishing test page
 function Generate-WebReputationAlert {
     $url = "http://www.amtso.org/check-desktop-phishing-page/"
-    Write-Host "Testing web reputation for: $url"
+    Write-Host "[INFO] Testing web reputation for: $url"
     try {
         Invoke-WebRequest -Uri $url -UseBasicParsing -ErrorAction Stop
         Write-Host "[ALERT] Page loaded successfully. Web reputation may not be blocking this URL."
@@ -34,8 +38,9 @@ function Generate-WebReputationAlert {
     }
 }
 
+# Function to test application control by running WinRAR portable
 function Generate-ApplicationControlAlert {
-    Write-Host "Downloading and running WinRAR portable version..."
+    Write-Host "[INFO] Downloading and running WinRAR portable version..."
     $winrarPortable = "$env:TEMP\WinRARPortable.exe"
     Invoke-WebRequest -Uri "https://www.win-rar.com/fileadmin/winrar-versions/winrar-x64-621.exe" -OutFile $winrarPortable
     Start-Process -FilePath $winrarPortable -NoNewWindow -Wait
@@ -43,15 +48,16 @@ function Generate-ApplicationControlAlert {
     Write-Host "[INFO] WinRAR Portable test complete."
 }
 
+# Function to generate a behavior monitoring alert by downloading and executing test malware samples
 function Generate-BehaviorMonitoringAlert {
-    Write-Host "[ALERT] Downloading and executing malware samples..."
+    Write-Host "[INFO] Downloading and executing test malware samples..."
     $malwareUrls = @("https://opwise.net/p0c/hosts.exe", "https://opwise.net/p0c/startup.exe")
     foreach ($url in $malwareUrls) {
         $fileName = $url.Split('/')[-1]
         $filePath = "$env:TEMP\$fileName"
         try {
             Invoke-WebRequest -Uri $url -OutFile $filePath -UseBasicParsing
-            Write-Host "[ALERT] Downloaded $fileName successfully."
+            Write-Host "[ALERT] Downloaded $fileName successfully. Executing..."
             Start-Process -FilePath $filePath -NoNewWindow -Wait
         } catch {
             Write-Host "[ERROR] Failed to download or execute $fileName. Error: $_"
@@ -59,13 +65,15 @@ function Generate-BehaviorMonitoringAlert {
     }
 }
 
+# Function to clean up downloaded files and exit
 function Cleanup {
-    Write-Host "Reverting all changes..."
+    Write-Host "[INFO] Reverting all changes..."
     Get-ChildItem -Path "$env:TEMP" | Where-Object { $_.Name -match "(malware_sample|hosts.exe|startup.exe|WinRARPortable.exe)" } | ForEach-Object { Remove-Item -Path $_.FullName -Force -ErrorAction SilentlyContinue }
-    Write-Host "Cleanup complete. Exiting..."
+    Write-Host "[INFO] Cleanup complete. Exiting..."
     exit
 }
 
+# Main menu loop
 while ($true) {
     Write-Host $menu
     $choice = Read-Host "Enter choice (1-5)"
@@ -75,6 +83,6 @@ while ($true) {
         "3" { Generate-ApplicationControlAlert }
         "4" { Generate-BehaviorMonitoringAlert }
         "5" { Cleanup }
-        default { Write-Host "Invalid selection. Please choose again." }
+        default { Write-Host "[ERROR] Invalid selection. Please choose again." }
     }
 }
